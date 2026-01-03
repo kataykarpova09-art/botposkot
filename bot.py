@@ -1,6 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.fsm.storage.memory import MemoryStorage  # Новый импорт для FSM
+from aiogram.fsm.storage.memory import MemoryStorage  # Исправленный импорт для aiogram 3.x
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime, timedelta
