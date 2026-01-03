@@ -208,5 +208,7 @@ async def on_startup(_):
     asyncio.create_task(auto_reject_orders())
 
 # ===================== ЗАПУСК =====================
-if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+async def main():
+    # Начинаем обработку событий
+    await dp.start_polling(bot)
+
