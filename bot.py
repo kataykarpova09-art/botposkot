@@ -1,8 +1,8 @@
 import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.storage.memory import MemoryStorage  # Новый импорт для FSM
 from aiogram.filters import Command
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime, timedelta
 import re
 
@@ -10,8 +10,8 @@ TOKEN = "8559347659:AAFnsr-pzRMzReHyt44ysrMjjnIwy4b4gDg"  # вставь сво�
 ADMIN_ID = 8221472317
 
 bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
+storage = MemoryStorage()  # Новый способ создания storage для FSM
+dp = Dispatcher(storage=storage)
 
 # ===================== ДАННЫЕ =====================
 SECOND_ADMIN = None
@@ -57,12 +57,12 @@ async def start(message: types.Message):
     kb.add("🛍 Каталог", "📍 Доступные районы", "👑 Админ")
     await message.answer("✨ Добро пожаловать в премиальный магазин 🛒", reply_markup=kb)
 
-@dp.message_handler(text="📍 Доступные районы")
+@dp.message(Command("start"))
 async def areas(message: types.Message):
     text = "📍 Доступные районы доставки:\n\n" + "\n".join([f"• {a}" for a in AREAS])
     await message.answer(text)
 
-@dp.message_handler(text="🛍 Каталог")
+@dp.message(Command("start"))
 async def catalog(message: types.Message):
     # Отправляем каждый товар как отдельную "карточку"
     for key, p in PRODUCTS.items():
@@ -75,7 +75,7 @@ async def catalog(message: types.Message):
         kb.add(InlineKeyboardButton("🛒 Выбрать", callback_data=f"select_{key}"))
         await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
-@dp.callback_query_handler(lambda c: c.data.startswith("select_"))
+@dp.callback_query(Command(lambda c: c.data.startswith("select_")))
 async def select_product(callback: types.CallbackQuery):
     global ORDER_ID_COUNTER
     product_key = callback.data.split("_")[1]
@@ -111,7 +111,7 @@ async def select_product(callback: types.CallbackQuery):
     )
     await bot.send_message(callback.from_user.id, text, reply_markup=kb, parse_mode="HTML")
 
-@dp.callback_query_handler(lambda c: c.data.startswith("pay_"))
+@dp.callback_query(Command(lambda c: c.data.startswith("pay_")))
 async def payment_info(callback: types.CallbackQuery):
     parts = callback.data.split("_")
     method = parts[1]
@@ -139,7 +139,7 @@ async def payment_info(callback: types.CallbackQuery):
                            f"Товар: {order['product']} — {order['price']}₽\nОплата: {order['payment']} — Статус: waiting")
 
 # ===================== АДМИН-ПАНЕЛЬ =====================
-@dp.message_handler(text="👑 Админ")
+@dp.message(Command("start"))
 async def admin_panel(message: types.Message):
     if not check_admin(message.from_user.id):
         await message.answer("❌ У вас нет доступа!")
