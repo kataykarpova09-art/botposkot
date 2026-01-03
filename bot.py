@@ -1,7 +1,8 @@
 import asyncio
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from datetime import datetime, timedelta
 import re
 
@@ -50,7 +51,7 @@ async def auto_reject_orders():
         await asyncio.sleep(30)
 
 # ===================== ПОЛЬЗОВАТЕЛЬ =====================
-@dp.message_handler(commands=["start"])
+@dp.message(Command("start"))
 async def start(message: types.Message):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add("🛍 Каталог", "📍 Доступные районы", "👑 Админ")
@@ -150,65 +151,12 @@ async def admin_panel(message: types.Message):
     )
     await message.answer("👑 <b>Админ-панель</b>:", reply_markup=kb, parse_mode="HTML")
 
-@dp.callback_query_handler(lambda c: c.data == "adm_orders")
-async def view_orders(callback: types.CallbackQuery):
-    text = "📋 <b>Заказы:</b>\n"
-    for order in ORDERS:
-        text += (f"#{order['id']} {order['user']} — {order['product']} — {order['price']}₽ — "
-                 f"{order['payment']} — {order['status']}\n")
-        if order["status"] == "waiting":
-            text += f"/confirm_{order['id']} ✅ /reject_{order['id']} ❌\n"
-    await bot.send_message(callback.from_user.id, text, parse_mode="HTML")
-
-@dp.message_handler(lambda m: m.text.startswith("/confirm_") or m.text.startswith("/reject_"))
-async def admin_confirm_reject(message: types.Message):
-    if not check_admin(message.from_user.id):
-        await message.reply("❌ У вас нет доступа!")
-        return
-    cmd, order_id_str = message.text.split("_")
-    order_id = int(order_id_str)
-    order = get_order_by_id(order_id)
-    if not order:
-        await message.reply("❌ Заказ не найден!")
-        return
-    if cmd == "/confirm":
-        order["status"] = "confirmed"
-        await message.reply(f"✅ Заказ #{order_id} подтвержден")
-        await bot.send_message(order["user_id"], f"✅ Ваш заказ #{order_id} подтвержден администратором.")
-        if order["photo"]:
-            await bot.send_photo(order["user_id"], order["photo"], caption=f"Ваш заказ #{order_id}")
-    else:
-        order["status"] = "rejected"
-        await message.reply(f"❌ Заказ #{order_id} отклонен")
-        await bot.send_message(order["user_id"], f"❌ Ваш заказ #{order_id} отклонен администратором.")
-
-@dp.callback_query_handler(lambda c: c.data == "adm_add_photo")
-async def add_photo_start(callback: types.CallbackQuery):
-    await bot.send_message(callback.from_user.id, "📸 Отправьте фото посылки с подписью #НомерЗаказа")
-
-@dp.message_handler(content_types=['photo'])
-async def save_photo(message: types.Message):
-    if not check_admin(message.from_user.id):
-        return
-    caption = message.caption or ""
-    m = re.search(r"#(\d+)", caption)
-    if not m:
-        await message.reply("❌ Укажите номер заказа в подписи, например: #1")
-        return
-    order_id = int(m.group(1))
-    order = get_order_by_id(order_id)
-    if not order:
-        await message.reply("❌ Заказ не найден")
-        return
-    order["photo"] = message.photo[-1].file_id
-    await message.reply(f"✅ Фото добавлено к заказу #{order_id}")
-
-# ===================== Фоновая проверка =====================
-async def on_startup(_):
-    asyncio.create_task(auto_reject_orders())
-
 # ===================== ЗАПУСК =====================
 async def main():
-    # Начинаем обработку событий
+    # Фоновая проверка заказов
+    asyncio.create_task(auto_reject_orders())
     await dp.start_polling(bot)
 
+if __name__ == "__main__":
+    # Запуск бота
+    asyncio.run(main())
