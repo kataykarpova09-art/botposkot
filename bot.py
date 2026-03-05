@@ -6,8 +6,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime, timedelta
 import re
 
-TOKEN = "8559347659:AAFnsr-pzRMzReHyt44ysrMjjnIwy4b4gDg"  # вставь свой токен
-ADMIN_ID = 8221472317
+TOKEN = "8603867811:AAEgVQlrX0CuZ0rXEnl6udhB9S5b_nsnc3Q"  # вставь свой токен
+ADMIN_ID = 576550060
 
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()  # Новый способ создания storage для FSM
@@ -160,3 +160,4 @@ async def main():
 if __name__ == "__main__":
     # Запуск бота
     asyncio.run(main())
+
